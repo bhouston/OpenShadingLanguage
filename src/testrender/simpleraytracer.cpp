@@ -19,7 +19,9 @@ namespace pugi = OIIO::pugi;
 #    include "simpleraytracer.h"
 #endif
 
+#include <algorithm>
 #include <cmath>
+#include <sstream>
 
 // Create ustrings for all strings used by the free function renderer services.
 // Required to allow the reverse mapping of hash->string to work when processing messages
@@ -275,6 +277,25 @@ parse_prefix_and_ints(string_view str, string_view prefix, int nvals, int* vals)
     return ok;
 }
 
+inline bool
+parse_matrix44(string_view str, Matrix44& matrix)
+{
+    std::string text(str);
+    std::replace(text.begin(), text.end(), ',', ' ');
+    std::stringstream stream(text);
+    float values[16];
+    for (int i = 0; i < 16; ++i) {
+        if (!(stream >> values[i])) {
+            return false;
+        }
+    }
+    matrix = Matrix44(values[0], values[1], values[2], values[3], values[4],
+                      values[5], values[6], values[7], values[8], values[9],
+                      values[10], values[11], values[12], values[13],
+                      values[14], values[15]);
+    return true;
+}
+
 
 
 void
@@ -394,6 +415,17 @@ SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
                     scene.add_model(actual_filename, shadermap,
                                     int(shaders().size() - 1), errhandler());
                 }
+            }
+        } else if (strcmp(node.name(), "Transform") == 0) {
+            pugi::xml_attribute name_attr   = node.attribute("name");
+            pugi::xml_attribute matrix_attr = node.attribute("matrix");
+            if (name_attr && matrix_attr) {
+                Matrix44 M;
+                if (parse_matrix44(matrix_attr.value(), M))
+                    name_transform(name_attr.value(), M);
+                else
+                    errhandler().errorfmt("Unable to parse transform matrix for {}",
+                                          name_attr.value());
             }
         } else if (strcmp(node.name(), "Background") == 0) {
             pugi::xml_attribute res_attr = node.attribute("resolution");
