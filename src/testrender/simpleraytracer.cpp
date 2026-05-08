@@ -1114,13 +1114,16 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                              * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf,
                                                                         b.pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
-                ShaderGlobalsType shadow_sg;
-                Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0, 0,
-                                              Ray::SHADOW);
-                Intersection shadow_hit = scene.intersect(shadow_ray, inf,
-                                                          hit.id);
-                if (shadow_hit.t == inf)  // ray reached the background?
+                if (!shadows) {
                     path_radiance += contrib;
+                } else {
+                    Ray shadow_ray          = Ray(sg.P, bg_dir.val(), radius, 0, 0,
+                                                  Ray::SHADOW);
+                    Intersection shadow_hit = scene.intersect(shadow_ray, inf,
+                                                              hit.id);
+                    if (shadow_hit.t == inf)  // ray reached the background?
+                        path_radiance += contrib;
+                }
             }
         }
 
@@ -1147,22 +1150,25 @@ SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler,
                     ShaderGlobalsType light_sg;
                     Ray shadow_ray = Ray(sg.P, sample.dir, radius, 0, 0,
                                          Ray::SHADOW);
-                    // trace a shadow ray and see if we actually hit the target
-                    // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-                    Intersection shadow_hit
-                        = scene.intersect(shadow_ray, sample.dist, hit.id, lid);
+                    bool did_hit = true;
+                    if (shadows) {
+                        // trace a shadow ray and see if we actually hit the target
+                        // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
+                        Intersection shadow_hit
+                            = scene.intersect(shadow_ray, sample.dist, hit.id, lid);
 
 #ifndef __CUDACC__
-                    const bool did_hit = shadow_hit.t == sample.dist;
+                        did_hit = shadow_hit.t == sample.dist;
 #else
-                    // The hit distance on the device is not as precise as on
-                    // the CPU, so we need to allow a little wiggle room. An
-                    // epsilon of 1e-3f empirically gives results that closely
-                    // match the CPU for the test scenes, so that's what we're
-                    // using.
-                    const bool did_hit = fabsf(shadow_hit.t - sample.dist)
-                                         < 1e-3f;
+                        // The hit distance on the device is not as precise as on
+                        // the CPU, so we need to allow a little wiggle room. An
+                        // epsilon of 1e-3f empirically gives results that closely
+                        // match the CPU for the test scenes, so that's what we're
+                        // using.
+                        did_hit = fabsf(shadow_hit.t - sample.dist)
+                                  < 1e-3f;
 #endif
+                    }
                     if (did_hit) {
                         // setup a shader global for the point on the light
                         globals_from_hit(light_sg, shadow_ray, sample.dist, lid,
@@ -1234,6 +1240,7 @@ SimpleRaytracer::prepare_render()
     // Retrieve and validate options
     aa                = std::max(1, options.get_int("aa"));
     no_jitter         = options.get_int("no_jitter") != 0;
+    shadows           = options.get_int("shadows", 1) != 0;
     max_bounces       = options.get_int("max_bounces");
     rr_depth          = options.get_int("rr_depth");
     show_albedo_scale = options.get_float("show_albedo_scale");

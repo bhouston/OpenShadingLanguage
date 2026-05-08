@@ -45,6 +45,7 @@ struct SimpleRaytracer {
     Scene scene;
     int aa                          = 1;
     bool no_jitter                  = false;
+    bool shadows                    = true;
     int backgroundResolution        = 1024;
     int backgroundShaderID          = -1;
     int max_bounces                 = 1000000;

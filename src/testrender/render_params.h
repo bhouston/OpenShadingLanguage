@@ -21,6 +21,7 @@ struct RenderParams {
     int max_bounces;
     float show_albedo_scale;
     bool no_jitter;
+    bool shadows;
     int show_globals;
 
     CUdeviceptr traversal_handle;

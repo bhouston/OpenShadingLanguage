@@ -4,6 +4,7 @@
 
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -51,6 +52,7 @@ static std::string texoptions;
 static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
 static bool no_jitter          = false;
+static bool shadows            = true;
 static float show_albedo_scale = 0.0f;
 static int show_globals        = 0;
 static int num_threads         = 0;
@@ -67,6 +69,17 @@ static bool optix_no_inline_rend_lib    = false;
 static bool optix_no_rend_lib_bitcode   = false;
 static int optix_no_inline_thresh       = 100000;
 static int optix_force_inline_thresh    = 0;
+
+
+static bool
+parse_bool_arg(const char* value)
+{
+    std::string normalized = value ? value : "";
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return normalized != "0" && normalized != "false" && normalized != "off"
+           && normalized != "no";
+}
 
 
 // Set shading system global attributes based on command line options.
@@ -176,6 +189,9 @@ getargs(int argc, const char* argv[])
       .help("Trace NxN rays per pixel");
     ap.arg("--no-jitter", &no_jitter)
       .help("Disable AA pixel jitter");
+    ap.arg("--shadows %s:BOOL")
+      .help("Enable or disable shadow occlusion rays")
+      .action([&](cspan<const char*> argv) { shadows = parse_bool_arg(argv[1]); });
     ap.arg("-albedo %f:SCALE", &show_albedo_scale)
       .help("Visualize the albedo of each pixel instead of path tracing");
     ap.arg("-normals")
@@ -291,6 +307,7 @@ main(int argc, const char* argv[])
     rend->attribute("rr_depth", rr_depth);
     rend->attribute("aa", aa);
     rend->attribute("no_jitter", (int)no_jitter);
+    rend->attribute("shadows", (int)shadows);
     rend->attribute("show_albedo_scale", show_albedo_scale);
     rend->attribute("show_globals", show_globals);
     OIIO::attribute("threads", num_threads);

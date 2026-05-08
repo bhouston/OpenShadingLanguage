@@ -1063,6 +1063,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     const int aa                  = std::max(1, options.get_int("aa"));
     const int max_bounces         = options.get_int("max_bounces");
     const bool no_jitter          = options.get_int("no_jitter");
+    const bool shadows            = options.get_int("shadows", 1) != 0;
     const float show_albedo_scale = options.get_float("show_albedo_scale");
     const int show_globals        = options.get_int("show_globals");
 
@@ -1082,6 +1083,7 @@ OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
     params.show_albedo_scale       = show_albedo_scale;
     params.show_globals            = show_globals;
     params.no_jitter               = no_jitter;
+    params.shadows                 = shadows;
     params.interactive_params      = d_interactive_params;
     params.output_buffer           = d_output_buffer;
     params.traversal_handle        = m_travHandle;

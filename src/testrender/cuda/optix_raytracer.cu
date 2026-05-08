@@ -152,6 +152,7 @@ setupRaytracer(SimpleRaytracer& raytracer, const bool bg_only)
     // Parameters
     raytracer.aa                = render_params.aa;
     raytracer.no_jitter         = render_params.no_jitter;
+    raytracer.shadows           = render_params.shadows;
     raytracer.max_bounces       = render_params.max_bounces;
     raytracer.rr_depth          = 5;
     raytracer.show_albedo_scale = render_params.show_albedo_scale;
